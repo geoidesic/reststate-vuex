@@ -188,6 +188,17 @@ const resourceModule = ({ name: resourceName, httpClient }) => {
         state.records = state.records.filter(r => r.id !== record.id);
       },
 
+      REMOVE_RELATED: (state, { relatedIds, params }) => {
+        const { related } = state;
+        const relationshipIndex = getRelationshipIndex(params);
+        const existingRecord = related.find(matches(relationshipIndex));
+        if (existingRecord) {
+          existingRecord.relatedIds = relatedIds;
+        } else {
+        }
+        state.records = state.records.filter(r => !relatedIds.includes(r.id));
+      },
+
       SET_LINKS: (state, links) => {
         state.links = links || {};
       },
@@ -404,6 +415,56 @@ const resourceModule = ({ name: resourceName, httpClient }) => {
 
       resetState({ commit }) {
         commit('RESET_STATE');
+      },
+
+      // @todo: can't test this as my back-end JSONAPI server doesn't support this
+      // addRelated({ commit, getters }, params) {
+      //   const { parent, relationship = resourceName, data } = params;
+      //   const relatedItems = getters.related(params).map(o => o.id);
+      //   const difference = data.filter(x => !relatedItems.includes(x));
+      //   const records = difference.map(id => {
+      //     return { type: relationship, id };
+      //   });
+      //   client.createRelationships(parent, relationship, records);
+      // },
+
+      // @todo: can't test this as my back-end JSONAPI server doesn't support this
+      // removeRelated({ commit, dispatch }, params) {
+      //   const { parent, relationship = resourceName, data } = params;
+      //   client.removeRelationships(parent, relationship, data);
+      //   if (Array.isArray(data)) {
+      //     relatedIds = data.map(record => record.id);
+      //   } else {
+      //     relatedIds = data.id;
+      //   }
+      //   commit('REMOVE_RELATED', {
+      //     params: { parent, relationship },
+      //     relatedIds,
+      //   });
+      // },
+
+      setRelated({ commit, dispatch }, params) {
+        const { parent, relationship = resourceName, data } = params;
+        client.updateRelationships(parent, relationship, data);
+        let relatedIds;
+        if (Array.isArray(data)) {
+          relatedIds = data.map(record => record.id);
+        } else {
+          relatedIds = data.id;
+        }
+        commit('STORE_RELATED', {
+          params: { parent, relationship },
+          relatedIds,
+        });
+      },
+
+      removeAllRelated({ commit, dispatch }, params) {
+        const { parent, relationship = resourceName } = params;
+        client.updateRelationships(parent, relationship, []);
+        commit('REMOVE_RELATED', {
+          params: { parent, relationship },
+          relatedIds,
+        });
       },
     },
 
